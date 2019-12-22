@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="X-UA-Compatible" content="ie=edge" />
+    <title>Document</title>
+
+    <style>
+      .node {
+        cursor: pointer;
+      }
+
+      .overlay {
+        background-color: #eee;
+      }
+
+      .node circle {
+        fill: #fff;
+        stroke: steelblue;
+        stroke-width: 1.5px;
+      }
+
+      .node text {
+        font-size: 10px;
+        font-family: sans-serif;
+      }
+
+      .link {
+        fill: none;
+        stroke: #ccc;
+        stroke-width: 1.5px;
+      }
+
+      .templink {
+        fill: none;
+        stroke: red;
+        stroke-width: 3px;
+      }
+
+      .ghostCircle.show {
+        display: block;
+      }
+
+      .ghostCircle,
+      .activeDrag .ghostCircle {
+        display: none;
+      }
+
+      textarea {
+        width: 100%;
+      }
+
+      .graph {
+        width: 100%;
+        height: 600px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Binary Search Tree</h1>
+    <textarea name="bst-input" id="" rows="6">
+116
+37 23 108 59 86 64 94 14 105 17 111 65 55 31 79 97 78 25 50 22 66 46 104 98 81 90 68 40 103 77 74 18 69 82 41 4 48 83 67 6 2 95 54 100 99 84 34 88 27 72 32 62 9 56 109 115 33 15 91 29 85 114 112 20 26 30 93 96 87 42 38 60 7 73 35 12 10 57 80 13 52 44 16 70 8 39 107 106 63 24 92 45 75 116 5 61 49 101 71 11 53 43 102 110 1 58 36 28 76 47 113 21 89 51 19 3
+    </textarea>
+    <div>
+      <button id="js-generate-bst">generate</button>
+    </div>
+    <div class="graph"></div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.17/d3.min.js"></script>
+    <script src="./dndTree.js"></script>
+    <script>
+      document
+        .getElementById("js-generate-bst")
+        .addEventListener("click", () => {
+          var input = document.querySelector("[name='bst-input']").value,
+            inputArr = input.split("\n"),
+            data = inputArr[1].trim().split(" ");
+
+          initTree(generateTreeData(data), document.querySelector(".graph"));
+        });
+      function generateTreeData(data) {
+        var treeData = insert(null, data[0]);
+        for (let i = 1; i < data.length; i++) {
+          insert(treeData, data[i]);
+        }
+        handleEmpty(treeData);
+        function handleEmpty(treeData) {
+          if (!treeData || !treeData.children.length) {
+            return;
+          }
+          if (treeData.children[0]) {
+            handleEmpty(treeData.children[0]);
+          } else {
+            treeData.children[0] = insert(null, "empty");
+          }
+          if (treeData.children[1]) {
+            handleEmpty(treeData.children[1]);
+          } else {
+            treeData.children[1] = insert(null, "empty");
+          }
+        }
+        function insert(root, data) {
+          if (!root) {
+            return { name: data, parent: "null", children: [] };
+          } else {
+            let temp = null;
+            if (+data <= +root.name) {
+              cur = insert(root.children[0], data);
+              cur.parent = root.name;
+              root.children[0] = cur;
+            } else {
+              cur = insert(root.children[1], data);
+              cur.parent = root.name;
+              root.children[1] = cur;
+            }
+          }
+          return root;
+        }
+        return treeData;
+      }
+    </script>
+  </body>
+</html>
