@@ -13,7 +13,8 @@
   </head>
   <body>
     <p>
-      reg like <input id="js-input" type="text" value="(((a|b)*)(ab)*)" /><button
+      reg like
+      <input id="js-input" type="text" value="(((a|b)*)(ab)*)" /><button
         onclick="generate()"
       >
         generate
@@ -28,7 +29,7 @@
         const width = graph.clientWidth;
         const height = graph.clientHeight;
         const reg = document.getElementById("js-input").value;
-        const nfa = regRPN2NFA(getRegReversePolishNotation(reg))[0];
+        const nfa = rmEpsilon(regRPN2NFA(getRegReversePolishNotation(reg)))[0];
         const links = [];
         const nodes = [];
         const stack = [nfa[0]];
@@ -36,10 +37,10 @@
         while (stack.length) {
           const node = stack.pop();
           if (visited.has(node)) {
-            break;
+            continue;
           }
-          visited.add(node);
           nodes.push({ id: node[3] });
+          visited.add(node);
           node[0].forEach((target) => {
             links.push({
               source: node[3],
@@ -93,7 +94,7 @@
           );
           return `
             M${d.source.x},${d.source.y}
-            A${r},${r} 0 0,1 ${d.target.x},${d.target.y}
+            L${d.target.x},${d.target.y}
           `;
         }
 
@@ -128,7 +129,7 @@
             "link",
             d3.forceLink(links).id((d) => d.id)
           )
-          .force("charge", d3.forceManyBody().strength(-400))
+          .force("charge", d3.forceManyBody().strength(-4000))
           .force("x", d3.forceX())
           .force("y", d3.forceY());
 
