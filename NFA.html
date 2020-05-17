@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+    <style>
+      .graph {
+        width: 100%;
+        height: 600px;
+      }
+    </style>
+  </head>
+  <body>
+    <p>
+      reg like <input id="js-input" type="text" value="(((a|b)*)(ab)*)" /><button
+        onclick="generate()"
+      >
+        generate
+      </button>
+    </p>
+    <div class="graph"></div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/5.16.0/d3.min.js"></script>
+    <script src="./reg2nfa.js"></script>
+    <script>
+      function generate() {
+        const graph = document.querySelector(".graph");
+        const width = graph.clientWidth;
+        const height = graph.clientHeight;
+        const reg = document.getElementById("js-input").value;
+        const nfa = regRPN2NFA(getRegReversePolishNotation(reg))[0];
+        const links = [];
+        const nodes = [];
+        const stack = [nfa[0]];
+        const visited = new Set();
+        while (stack.length) {
+          const node = stack.pop();
+          if (visited.has(node)) {
+            break;
+          }
+          visited.add(node);
+          nodes.push({ id: node[3] });
+          node[0].forEach((target) => {
+            links.push({
+              source: node[3],
+              target: target[3],
+              type: "a",
+            });
+            if (!visited.has(target)) {
+              stack.push(target);
+            }
+          });
+          node[1].forEach((target) => {
+            links.push({
+              source: node[3],
+              target: target[3],
+              type: "b",
+            });
+            if (!visited.has(target)) {
+              stack.push(target);
+            }
+          });
+          node[2].forEach((target) => {
+            links.push({
+              source: node[3],
+              target: target[3],
+              type: "epsilon",
+            });
+            if (!visited.has(target)) {
+              stack.push(target);
+            }
+          });
+        }
+
+        // draw
+        const types = Array.from(new Set(links.map((d) => d.type)));
+        const color = d3.scaleOrdinal(types, d3.schemeCategory10);
+
+        function linkText(d) {
+          const r = Math.hypot(
+            d.target.x - d.source.x,
+            d.target.y - d.source.y
+          );
+          const x = (d.target.x - d.source.x) / 2;
+          const y = (d.target.y - d.source.y) / 2;
+          return `translate(${-x},${-y})`;
+        }
+
+        function linkArc(d) {
+          const r = Math.hypot(
+            d.target.x - d.source.x,
+            d.target.y - d.source.y
+          );
+          return `
+            M${d.source.x},${d.source.y}
+            A${r},${r} 0 0,1 ${d.target.x},${d.target.y}
+          `;
+        }
+
+        const drag = (simulation) => {
+          function dragstarted(d) {
+            if (!d3.event.active) simulation.alphaTarget(0.3).restart();
+            d.fx = d.x;
+            d.fy = d.y;
+          }
+
+          function dragged(d) {
+            d.fx = d3.event.x;
+            d.fy = d3.event.y;
+          }
+
+          function dragended(d) {
+            if (!d3.event.active) simulation.alphaTarget(0);
+            d.fx = null;
+            d.fy = null;
+          }
+
+          return d3
+            .drag()
+            .on("start", dragstarted)
+            .on("drag", dragged)
+            .on("end", dragended);
+        };
+
+        const simulation = d3
+          .forceSimulation(nodes)
+          .force(
+            "link",
+            d3.forceLink(links).id((d) => d.id)
+          )
+          .force("charge", d3.forceManyBody().strength(-400))
+          .force("x", d3.forceX())
+          .force("y", d3.forceY());
+
+        const svg = d3
+          .select(".graph")
+          .append("svg")
+          .attr("viewBox", [-width / 2, -height / 2, width, height])
+          .style("font", "12px sans-serif");
+
+        // Per-type markers, as they don't inherit styles.
+        svg
+          .append("defs")
+          .selectAll("marker")
+          .data(types)
+          .join("marker")
+          .attr("id", (d) => `arrow-${d}`)
+          .attr("viewBox", "0 -5 10 10")
+          .attr("refX", 15)
+          .attr("refY", -0.5)
+          .attr("markerWidth", 6)
+          .attr("markerHeight", 6)
+          .attr("orient", "auto")
+          .append("path")
+          .attr("fill", color)
+          .attr("d", "M0,-5L10,0L0,5");
+
+        const link = svg
+          .append("g")
+          .attr("fill", "none")
+          .attr("stroke-width", 1.5)
+          .selectAll("path")
+          .data(links)
+          .join("g");
+
+        link
+          .append("path")
+          .attr("stroke", (d) => color(d.type))
+          .attr(
+            "marker-end",
+            (d) => `url(${new URL(`#arrow-${d.type}`, location)})`
+          );
+
+        link
+          .append("text")
+          .attr("x", 0)
+          .attr("y", 0)
+          .attr("fill", "currentColor")
+          .text((d) => d.type);
+
+        const node = svg
+          .append("g")
+          .attr("fill", "currentColor")
+          .attr("stroke-linecap", "round")
+          .attr("stroke-linejoin", "round")
+          .selectAll("g")
+          .data(nodes)
+          .join("g")
+          .call(drag(simulation));
+
+        node
+          .append("circle")
+          .attr("stroke", "white")
+          .attr("stroke-width", 1.5)
+          .attr("r", 4);
+
+        node
+          .append("text")
+          .attr("x", 8)
+          .attr("y", "0.31em")
+          .text((d) => d.id)
+          .clone(true)
+          .lower()
+          .attr("fill", "none")
+          .attr("stroke", "white")
+          .attr("stroke-width", 3);
+
+        simulation.on("tick", () => {
+          link.selectAll("path").attr("d", linkArc);
+          link
+            .selectAll("text")
+            .attr("x", (d) => d.source.x)
+            .attr("y", (d) => d.source.y)
+            .attr("dx", (d) => (d.target.x - d.source.x) / 2)
+            .attr("dy", (d) => (d.target.y - d.source.y) / 2);
+          node.attr("transform", (d) => `translate(${d.x},${d.y})`);
+        });
+      }
+    </script>
+  </body>
+</html>
