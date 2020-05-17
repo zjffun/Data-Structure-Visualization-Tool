@@ -90,14 +90,17 @@ function regRPN2NFA(reg) {
     }
     i++;
   }
-  return stack;
+  return stack[0];
 }
 
 function rmEpsilon(nfa) {
+  // receiving
   const receiving = nfa[1];
+  receiving[4] = true;
+
   const remainNodes = new Set(allNodes);
   function epsilonNode(node) {
-    if (node === receiving || !node[2].length || !remainNodes.has(node)) {
+    if (!node[2].length || !remainNodes.has(node)) {
       remainNodes.delete(node);
       return node;
     }
@@ -124,6 +127,7 @@ function rmEpsilon(nfa) {
         }, []),
       ]),
     ];
+    node[4] = nodes.find((cnode) => cnode[4]) ? true : false;
 
     remainNodes.delete(node);
     return node;

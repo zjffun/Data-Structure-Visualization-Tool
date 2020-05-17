@@ -29,7 +29,7 @@
         const width = graph.clientWidth;
         const height = graph.clientHeight;
         const reg = document.getElementById("js-input").value;
-        const nfa = rmEpsilon(regRPN2NFA(getRegReversePolishNotation(reg)))[0];
+        const nfa = rmEpsilon(regRPN2NFA(getRegReversePolishNotation(reg)));
         const links = [];
         const nodes = [];
         const stack = [nfa[0]];
@@ -39,7 +39,11 @@
           if (visited.has(node)) {
             continue;
           }
-          nodes.push({ id: node[3] });
+          nodes.push({
+            id: node[3],
+            acceptance: node[4],
+            start: node === nfa[0],
+          });
           visited.add(node);
           node[0].forEach((target) => {
             links.push({
@@ -193,7 +197,13 @@
           .append("circle")
           .attr("stroke", "white")
           .attr("stroke-width", 1.5)
-          .attr("r", 4);
+          .attr("r", 4)
+          .attr("fill", (d) => {
+            if (d.start) {
+              return "green";
+            }
+            return d.acceptance ? "red" : "black";
+          });
 
         node
           .append("text")
